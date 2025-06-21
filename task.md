@@ -130,30 +130,33 @@
   - [x] parse_file関数
   - [x] ParserOptions構造体
 
-## Phase 7: テスト実装
+## Phase 7: テスト実装 ✅
 
 ### 7.1 ユニットテスト
-- [ ] src/tile.rs - テスト（#[cfg(test)]）
-  - [ ] tile_id_to_string正常系テスト
-  - [ ] tile_id_to_string境界値テスト
-  - [ ] tile_string_to_id正常系テスト
-- [ ] src/models.rs - テスト
-  - [ ] serde serialize/deserializeテスト
-  - [ ] Event列挙型テスト
-- [ ] src/parser.rs - テスト
-  - [ ] 各パース関数の単体テスト
-  - [ ] XMLタグ別テストケース
-  - [ ] エラー処理テスト
+- [x] src/tile.rs - テスト（#[cfg(test)]）
+  - [x] tile_id_to_string正常系テスト
+  - [x] tile_id_to_string境界値テスト
+  - [x] tile_string_to_id正常系テスト
+- [x] src/models.rs - テスト
+  - [x] serde serialize/deserializeテスト
+  - [x] Event列挙型テスト
+- [x] src/parser.rs - テスト
+  - [x] 各パース関数の単体テスト
+  - [x] XMLタグ別テストケース
+  - [x] エラー処理テスト
 
 ### 7.2 統合テスト
-- [ ] tests/integration_test.rs作成
-  - [ ] smoke_test_cli関数（Command実行テスト）
-  - [ ] 小さなmjlogサンプルでの完全パーステスト
-  - [ ] JSON出力内容検証
-- [ ] テストデータ準備
-  - [ ] tests/data/sample_minimal.xml作成
-  - [ ] tests/data/sample_minimal.xml.gz作成
-  - [ ] tests/data/sample_complete.xml作成（全機能網羅）
+- [x] tests/e2e_test.rs作成
+  - [x] CLI実行テスト（Command実行テスト）
+  - [x] サンプルmjlogでの完全パーステスト
+  - [x] JSON出力内容検証
+  - [x] ファイル出力モードテスト
+  - [x] verboseモードテスト
+  - [x] エラーハンドリングテスト
+- [x] テストデータ準備
+  - [x] tests/data/sample.xml作成
+  - [x] tests/data/sample_complex.xml作成
+  - [x] tests/data/sample_complex.mjlog作成（GZIP版）
 
 ### 7.3 ドキュメントテスト
 - [ ] 各public関数に/// docコメント追加
