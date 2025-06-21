@@ -4,7 +4,7 @@ use std::process::Command;
 use tempfile::NamedTempFile;
 
 mod helpers;
-use helpers::{complete_mjlog, minimal_mjlog};
+use helpers::{complete_mjlog, minimal_mjlog, test_data_path};
 
 #[test]
 fn test_parse_minimal_mjlog() {
@@ -110,4 +110,24 @@ fn test_json_serialization() {
     // Test deserialization back
     let parsed_back: Result<ParserOutput, _> = serde_json::from_str(&json_str);
     assert!(parsed_back.is_ok());
+}
+
+#[test]
+fn test_sample_xml_file_parsing() {
+    let sample_path = test_data_path("sample.xml");
+    
+    // Check if sample file exists
+    if sample_path.exists() {
+        let content = std::fs::read_to_string(&sample_path).unwrap();
+        let cursor = Cursor::new(content.as_bytes());
+        let result = parse_mjlog(cursor);
+        
+        assert!(result.is_ok());
+        let output = result.unwrap();
+        assert_eq!(output.mjlog_version, "2.3");
+        assert_eq!(output.players.len(), 4);
+    } else {
+        // Skip test if sample file doesn't exist
+        eprintln!("Sample file {:?} not found, skipping test", sample_path);
+    }
 }
