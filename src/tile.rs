@@ -2,20 +2,20 @@ use crate::error::{ParserError, Result};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TileType {
-    Man(u8),    // 1m-9m
-    Pin(u8),    // 1p-9p
-    Sou(u8),    // 1s-9s
-    East,       // 東
-    South,      // 南
-    West,       // 西
-    North,      // 北
-    White,      // 白
-    Green,      // 発
-    Red,        // 中
+    Man(u8), // 1m-9m
+    Pin(u8), // 1p-9p
+    Sou(u8), // 1s-9s
+    East,    // 東
+    South,   // 南
+    West,    // 西
+    North,   // 北
+    White,   // 白
+    Green,   // 発
+    Red,     // 中
 }
 
 /// Convert tile ID (0-135) to tile string representation
-/// 
+///
 /// # Examples
 /// ```
 /// use mjlog_parser::tile_id_to_string;
@@ -41,7 +41,7 @@ pub fn tile_id_to_string(id: u32) -> String {
 
 /// Convert tile string to tile ID (0-135)
 /// Returns the first ID for the tile type (multiple copies exist)
-/// 
+///
 /// # Examples
 /// ```
 /// use mjlog_parser::tile_string_to_id;
@@ -49,46 +49,61 @@ pub fn tile_id_to_string(id: u32) -> String {
 /// assert_eq!(tile_string_to_id("white").unwrap(), 124);
 /// ```
 pub fn tile_string_to_id(tile: &str) -> Result<u32> {
-    let tile_type = match tile {
-        s if s.ends_with('m') && s.len() == 2 => {
-            let num = s.chars().next().unwrap().to_digit(10).ok_or_else(|| {
-                ParserError::invalid_format(format!("Invalid man tile: {}", s))
-            })?;
-            if num >= 1 && num <= 9 {
-                num - 1
-            } else {
-                return Err(ParserError::invalid_format(format!("Invalid man tile: {}", s)));
+    let tile_type =
+        match tile {
+            s if s.ends_with('m') && s.len() == 2 => {
+                let num = s.chars().next().unwrap().to_digit(10).ok_or_else(|| {
+                    ParserError::invalid_format(format!("Invalid man tile: {}", s))
+                })?;
+                if (1..=9).contains(&num) {
+                    num - 1
+                } else {
+                    return Err(ParserError::invalid_format(format!(
+                        "Invalid man tile: {}",
+                        s
+                    )));
+                }
             }
-        }
-        s if s.ends_with('p') && s.len() == 2 => {
-            let num = s.chars().next().unwrap().to_digit(10).ok_or_else(|| {
-                ParserError::invalid_format(format!("Invalid pin tile: {}", s))
-            })?;
-            if num >= 1 && num <= 9 {
-                num - 1 + 9
-            } else {
-                return Err(ParserError::invalid_format(format!("Invalid pin tile: {}", s)));
+            s if s.ends_with('p') && s.len() == 2 => {
+                let num = s.chars().next().unwrap().to_digit(10).ok_or_else(|| {
+                    ParserError::invalid_format(format!("Invalid pin tile: {}", s))
+                })?;
+                if (1..=9).contains(&num) {
+                    num - 1 + 9
+                } else {
+                    return Err(ParserError::invalid_format(format!(
+                        "Invalid pin tile: {}",
+                        s
+                    )));
+                }
             }
-        }
-        s if s.ends_with('s') && s.len() == 2 => {
-            let num = s.chars().next().unwrap().to_digit(10).ok_or_else(|| {
-                ParserError::invalid_format(format!("Invalid sou tile: {}", s))
-            })?;
-            if num >= 1 && num <= 9 {
-                num - 1 + 18
-            } else {
-                return Err(ParserError::invalid_format(format!("Invalid sou tile: {}", s)));
+            s if s.ends_with('s') && s.len() == 2 => {
+                let num = s.chars().next().unwrap().to_digit(10).ok_or_else(|| {
+                    ParserError::invalid_format(format!("Invalid sou tile: {}", s))
+                })?;
+                if (1..=9).contains(&num) {
+                    num - 1 + 18
+                } else {
+                    return Err(ParserError::invalid_format(format!(
+                        "Invalid sou tile: {}",
+                        s
+                    )));
+                }
             }
-        }
-        "east" => 27,
-        "south" => 28,
-        "west" => 29,
-        "north" => 30,
-        "white" => 31,
-        "green" => 32,
-        "red" => 33,
-        _ => return Err(ParserError::invalid_format(format!("Unknown tile: {}", tile))),
-    };
+            "east" => 27,
+            "south" => 28,
+            "west" => 29,
+            "north" => 30,
+            "white" => 31,
+            "green" => 32,
+            "red" => 33,
+            _ => {
+                return Err(ParserError::invalid_format(format!(
+                    "Unknown tile: {}",
+                    tile
+                )))
+            }
+        };
 
     Ok(tile_type * 4)
 }
@@ -120,9 +135,9 @@ pub fn parse_tile_list(tiles: &str) -> Result<Vec<String>> {
     tiles
         .split(',')
         .map(|s| {
-            let id = s.parse::<u32>().map_err(|_| {
-                ParserError::invalid_format(format!("Invalid tile ID: {}", s))
-            })?;
+            let id = s
+                .parse::<u32>()
+                .map_err(|_| ParserError::invalid_format(format!("Invalid tile ID: {}", s)))?;
             Ok(tile_id_to_string(id))
         })
         .collect()

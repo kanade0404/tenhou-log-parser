@@ -89,11 +89,7 @@ pub enum Event {
     #[serde(rename = "dora")]
     Dora { indicator: String },
     #[serde(rename = "reach")]
-    Reach {
-        who: u8,
-        step: u8,
-        scores: [i32; 4],
-    },
+    Reach { who: u8, step: u8, scores: [i32; 4] },
     #[serde(rename = "agari")]
     Agari {
         who: u8,
@@ -130,16 +126,15 @@ pub enum KanType {
 #[serde(rename_all = "lowercase")]
 pub enum RyuukyokuReason {
     #[serde(rename = "nm")]
-    Normal,       // 通常の流局
+    Normal, // 通常の流局
     #[serde(rename = "yao9")]
-    Yao9,         // 九種九牌
+    Yao9, // 九種九牌
     #[serde(rename = "kaze4")]
-    Kaze4,        // 四風連打
+    Kaze4, // 四風連打
     #[serde(rename = "reach4")]
-    Reach4,       // 四人リーチ
+    Reach4, // 四人リーチ
     #[serde(rename = "ron3")]
-    Ron3,         // 三人和了
+    Ron3, // 三人和了
     #[serde(rename = "kan4")]
-    Kan4,         // 四槓散了
+    Kan4, // 四槓散了
 }
-
