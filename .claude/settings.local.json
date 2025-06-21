@@ -11,7 +11,8 @@
       "Bash(cargo fmt:*)",
       "Bash(cargo:*)",
       "Bash(./target/debug/mjlog-parser:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(grep:*)"
     ],
     "deny": []
   }
