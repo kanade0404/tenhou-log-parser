@@ -8,7 +8,10 @@
       "Bash(git commit:*)",
       "Bash(cargo test)",
       "Bash(cargo clippy:*)",
-      "Bash(cargo fmt:*)"
+      "Bash(cargo fmt:*)",
+      "Bash(cargo:*)",
+      "Bash(./target/debug/mjlog-parser:*)",
+      "Bash(curl:*)"
     ],
     "deny": []
   }
