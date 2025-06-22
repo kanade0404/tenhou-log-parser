@@ -36,6 +36,14 @@ pub enum ParserError {
 }
 
 impl ParserError {
+    /// Creates a `ParserError::Parse` variant with a custom error message and context.
+    ///
+    /// # Parameters
+    /// - `message`: The error message describing the parse failure.
+    /// - `context`: Additional context about where or why the error occurred.
+    ///
+    /// # Returns
+    /// A `ParserError` representing a generic parse error with the provided message and context.
     pub fn parse(message: impl Into<String>, context: impl Into<String>) -> Self {
         Self::Parse {
             message: message.into(),
@@ -43,14 +51,35 @@ impl ParserError {
         }
     }
 
+    /// Creates a `ParserError` representing an encoding error with the provided message.
+    ///
+    /// # Parameters
+    /// - `message`: A description of the encoding error.
+    ///
+    /// # Returns
+    /// A `ParserError::Encoding` variant containing the error message.
     pub fn encoding(message: impl Into<String>) -> Self {
         Self::Encoding(message.into())
     }
 
+    /// Creates a `ParserError` representing a schema validation error with the provided message.
+    ///
+    /// # Parameters
+    /// - `message`: Description of the schema error.
+    ///
+    /// # Returns
+    /// A `ParserError::Schema` variant containing the given message.
     pub fn schema(message: impl Into<String>) -> Self {
         Self::Schema(message.into())
     }
 
+    /// Creates a `ParserError` representing an invalid format error with the provided message.
+    ///
+    /// # Parameters
+    /// - `message`: A description of the invalid format encountered.
+    ///
+    /// # Returns
+    /// A `ParserError::InvalidFormat` variant containing the given message.
     pub fn invalid_format(message: impl Into<String>) -> Self {
         Self::InvalidFormat(message.into())
     }

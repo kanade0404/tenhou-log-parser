@@ -17,7 +17,16 @@ pub struct ParserOptions {
     pub validate_schema: Option<std::path::PathBuf>,
 }
 
-/// Parse mjlog file and write JSON to output
+/// Parses a mjlog file from the specified path and writes the parsed JSON output to the given output path.
+///
+/// Supports both plain and gzipped mjlog files. Converts the parsed data into structured JSON format and writes it to the output file.
+///
+/// # Parameters
+/// - `input_path`: Path to the input mjlog file (plain or `.gz` compressed).
+/// - `output_path`: Path where the JSON output will be written.
+///
+/// # Returns
+/// Returns `Ok(())` if parsing and writing succeed, or an error if file I/O or parsing fails.
 pub fn parse_file(input_path: &Path, output_path: &Path, options: &ParserOptions) -> Result<()> {
     info!("Parsing mjlog file: {:?}", input_path);
 
@@ -37,7 +46,14 @@ pub fn parse_file(input_path: &Path, output_path: &Path, options: &ParserOptions
     Ok(())
 }
 
-/// Parse mjlog from reader and write JSON to writer
+/// Parses mjlog data from a reader and writes the resulting structured JSON to a writer.
+///
+/// # Parameters
+/// - `reader`: Input source containing mjlog data in XML format.
+/// - `writer`: Output destination for the generated JSON.
+///
+/// # Returns
+/// Returns `Ok(())` if parsing and writing succeed, or an error if parsing or serialization fails.
 pub fn parse_stream<R: Read, W: Write>(
     reader: R,
     mut writer: W,
@@ -54,7 +70,12 @@ pub fn parse_stream<R: Read, W: Write>(
 /// Maximum file size limit (100MB) to prevent memory exhaustion
 const MAX_FILE_SIZE: usize = 100 * 1024 * 1024;
 
-/// Parse mjlog from reader and return ParserOutput
+/// Parses an mjlog XML stream from the given reader, decoding Shift_JIS encoding and returning structured game data as `ParserOutput`.
+///
+/// Reads up to 100MB from the input, decodes the content from Shift_JIS to UTF-8, and parses the XML into structured Mahjong game information. Returns an error if the file exceeds the size limit or if critical encoding issues are encountered. Partial encoding errors are logged as warnings but do not abort parsing.
+///
+/// # Returns
+/// A `ParserOutput` containing the parsed Mahjong game data.
 pub fn parse_mjlog<R: Read>(reader: R) -> Result<ParserOutput> {
     let reader = std::io::BufReader::new(reader);
     let mut buf = Vec::new();
@@ -108,6 +129,9 @@ struct MjlogParser {
 }
 
 impl MjlogParser {
+    /// Creates a new `MjlogParser` instance with default values.
+    ///
+    /// Initializes an empty mjlog version, generates a new UUID for the game ID, and sets up empty collections for rules, players, and rounds. No round is in progress.
     fn new() -> Self {
         Self {
             mjlog_version: String::new(),
@@ -119,6 +143,15 @@ impl MjlogParser {
         }
     }
 
+    /// Parses mjlog XML events from the provided reader, updating the parser state with game metadata, player information, rounds, and events.
+    ///
+    /// Dispatches parsing based on tag names, handling all relevant Mahjong game events and accumulating them into rounds. Finalizes any in-progress round at the end of parsing.
+    ///
+    /// # Parameters
+    /// - `reader`: The XML reader providing mjlog events.
+    ///
+    /// # Returns
+    /// Returns `Ok(())` if parsing completes successfully, or an error if XML parsing or event handling fails.
     fn parse<R: std::io::BufRead>(&mut self, reader: &mut Reader<R>) -> Result<()> {
         let mut buf = Vec::new();
 
@@ -168,6 +201,13 @@ impl MjlogParser {
         Ok(())
     }
 
+    /// Parses the `mjloggm` XML element to extract and store the mjlog version string.
+    ///
+    /// # Parameters
+    /// - `element`: The XML element representing the `mjloggm` tag.
+    ///
+    /// # Returns
+    /// Returns `Ok(())` if the version is successfully extracted or not present; otherwise, returns a parsing error.
     fn parse_mjloggm(&mut self, element: &quick_xml::events::BytesStart) -> Result<()> {
         for attr in element.attributes() {
             let attr = attr.map_err(|e| ParserError::Attr(e.to_string()))?;
@@ -178,6 +218,13 @@ impl MjlogParser {
         Ok(())
     }
 
+    /// Parses the `GO` XML tag to extract game rule type flags and optional lobby ID, updating the parser's rules state.
+    ///
+    /// # Parameters
+    /// - `element`: The XML element representing the `GO` tag.
+    ///
+    /// # Returns
+    /// Returns `Ok(())` if parsing succeeds, or a `ParserError` if attribute extraction or parsing fails.
     fn parse_go(&mut self, element: &quick_xml::events::BytesStart) -> Result<()> {
         let mut type_flags = 0;
         let mut lobby_id = None;
@@ -203,6 +250,9 @@ impl MjlogParser {
         Ok(())
     }
 
+    /// Parses player information from the `UN` XML tag and populates the players list.
+    ///
+    /// Extracts player names (percent-decoded), ranks, rates, and genders for all four seats from the tag's attributes and adds them to the parser state.
     fn parse_un(&mut self, element: &quick_xml::events::BytesStart) -> Result<()> {
         let mut names = vec![String::new(); 4];
         let mut dans = [0u32; 4];
@@ -254,6 +304,9 @@ impl MjlogParser {
         Ok(())
     }
 
+    /// Parses the `TAIKYOKU` XML tag to extract dealer seat information.
+    ///
+    /// Currently, the dealer (`oya`) value is parsed but not stored.
     fn parse_taikyoku(&mut self, element: &quick_xml::events::BytesStart) -> Result<()> {
         for attr in element.attributes() {
             let attr = attr.map_err(|e| ParserError::Attr(e.to_string()))?;
@@ -265,6 +318,12 @@ impl MjlogParser {
         Ok(())
     }
 
+    /// Parses the `INIT` XML tag to extract round initialization data, including round number, honba, kyoutaku, dice values, dora indicator, initial scores, and player hands.
+    ///
+    /// Finalizes any previous round and starts a new round with the parsed initialization data.
+    ///
+    /// # Errors
+    /// Returns an error if required attributes are missing, if the seed or score formats are invalid, or if attribute values cannot be parsed.
     fn parse_init(&mut self, element: &quick_xml::events::BytesStart) -> Result<()> {
         let mut seed = String::new();
         let mut ten = String::new();
@@ -347,6 +406,9 @@ impl MjlogParser {
         Ok(())
     }
 
+    /// Parses a draw event from an XML element and adds it to the current round's events.
+    ///
+    /// Determines the player's seat from the tag name and extracts the drawn tile ID from either the element's attributes or the tag name suffix. The tile is converted to its string representation and recorded as a draw event for the appropriate player. Returns an error if the tag format is invalid.
     fn parse_draw(&mut self, element: &quick_xml::events::BytesStart) -> Result<()> {
         let name = element.name();
         let tag_name = std::str::from_utf8(name.as_ref())?;
@@ -392,6 +454,10 @@ impl MjlogParser {
         Ok(())
     }
 
+    /// Parses a discard event from the given XML element and adds it to the current round's events.
+    ///
+    /// Determines the discarding player's seat and the discarded tile from the tag name or attributes.
+    /// The discard is recorded as a non-riichi discard. If the tag format is invalid, returns an error.
     fn parse_discard(&mut self, element: &quick_xml::events::BytesStart) -> Result<()> {
         let name = element.name();
         let tag_name = std::str::from_utf8(name.as_ref())?;
@@ -440,6 +506,10 @@ impl MjlogParser {
         Ok(())
     }
 
+    /// Parses a meld (naki) event from the XML element and adds a placeholder Pon event to the current round.
+    ///
+    /// Currently, this function does not fully decode the meld data and always creates a generic Pon event with placeholder tiles.
+    /// The actual meld type, tiles, and source player are not yet determined.
     fn parse_naki(&mut self, element: &quick_xml::events::BytesStart) -> Result<()> {
         let mut who = 0u8;
         let mut _meld = String::new();
@@ -467,6 +537,13 @@ impl MjlogParser {
         Ok(())
     }
 
+    /// Parses a dora indicator event from the XML element and adds it to the current round's events.
+    ///
+    /// # Parameters
+    /// - `element`: The XML element containing the dora indicator information.
+    ///
+    /// # Returns
+    /// Returns an error if the attribute cannot be read or parsed.
     fn parse_dora(&mut self, element: &quick_xml::events::BytesStart) -> Result<()> {
         for attr in element.attributes() {
             let attr = attr.map_err(|e| ParserError::Attr(e.to_string()))?;
@@ -481,6 +558,9 @@ impl MjlogParser {
         Ok(())
     }
 
+    /// Parses a reach (riichi) declaration event from the XML element and adds it to the current round's events.
+    ///
+    /// Extracts the declaring player's seat (`who`), the step of the declaration (`step`), and the current scores of all players (`ten`). If a round is in progress, appends a `Reach` event with this information.
     fn parse_reach(&mut self, element: &quick_xml::events::BytesStart) -> Result<()> {
         let mut who = 0u8;
         let mut step = 1u8;
@@ -509,6 +589,9 @@ impl MjlogParser {
         Ok(())
     }
 
+    /// Parses an AGARI (win) event from the mjlog XML and adds it to the current round's events.
+    ///
+    /// Extracts the winning player's seat, the player from whom the win was claimed, han, fu, yaku (currently placeholder), and score changes. Updates the current round with the parsed win event.
     fn parse_agari(&mut self, element: &quick_xml::events::BytesStart) -> Result<()> {
         let mut who = 0u8;
         let mut from = 0u8;
@@ -569,6 +652,9 @@ impl MjlogParser {
         Ok(())
     }
 
+    /// Parses a Ryuukyoku (draw) event from the XML element and adds it to the current round.
+    ///
+    /// Extracts the draw reason and score changes for each player, then appends a `Ryuukyoku` event to the round's event list.
     fn parse_ryuukyoku(&mut self, element: &quick_xml::events::BytesStart) -> Result<()> {
         let mut reason = RyuukyokuReason::Normal;
         let mut scores = [0i32; 4];
@@ -610,6 +696,12 @@ impl MjlogParser {
         Ok(())
     }
 
+    /// Converts the parser state into a `ParserOutput` struct.
+    ///
+    /// If rules were not parsed, fills in default values for type flags and lobby ID.
+    ///
+    /// # Returns
+    /// A `ParserOutput` containing the parsed mjlog version, game ID, rules, players, and rounds.
     fn into_output(self) -> ParserOutput {
         ParserOutput {
             mjlog_version: self.mjlog_version,
@@ -624,7 +716,10 @@ impl MjlogParser {
     }
 }
 
-// Helper function to decode percent-encoded strings
+/// Decodes a percent-encoded string into UTF-8.
+///
+/// Converts percent-encoded sequences (e.g., `%20`) in the input string to their corresponding UTF-8 characters.
+/// Invalid sequences are replaced with the Unicode replacement character.
 fn percent_decode(input: &str) -> String {
     percent_encoding::percent_decode_str(input)
         .decode_utf8_lossy()
@@ -641,6 +736,7 @@ mod tests {
     use tempfile::NamedTempFile;
 
     #[test]
+    /// Tests parsing of a minimal mjlog XML string, verifying correct extraction of version, player count, and round count.
     fn test_parse_minimal_mjlog() {
         let mjlog_content = r#"<?xml version="1.0" encoding="Shift_JIS"?>
 <mjloggm ver="2.3">
@@ -820,6 +916,7 @@ mod tests {
     }
 
     #[test]
+    /// Tests that different `RYUUKYOKU` types in the mjlog XML are correctly parsed into their corresponding `RyuukyokuReason` variants, and that unknown types default to `Normal`.
     fn test_ryuukyoku_types() {
         let mjlog_content = r#"<?xml version="1.0" encoding="Shift_JIS"?>
 <mjloggm ver="2.3">
@@ -985,12 +1082,20 @@ mod tests {
         // Test invalid JSON serialization by using a mock writer that always fails
         struct FailingWriter;
         impl Write for FailingWriter {
+            /// Always returns an error indicating that writing is not supported.
+            ///
+            /// # Returns
+            /// An error of kind `Other` with the message "Write failed".
             fn write(&mut self, _buf: &[u8]) -> std::io::Result<usize> {
                 Err(std::io::Error::new(
                     std::io::ErrorKind::Other,
                     "Write failed",
                 ))
             }
+            /// Attempts to flush the output stream, but always returns an error indicating the operation failed.
+            ///
+            /// # Errors
+            /// Always returns an error of kind `Other` with the message "Flush failed".
             fn flush(&mut self) -> std::io::Result<()> {
                 Err(std::io::Error::new(
                     std::io::ErrorKind::Other,

@@ -1,13 +1,21 @@
 use std::path::PathBuf;
 
-/// Get the path to a specific test data file
+/// Returns the path to a test data file located in the `tests/data` directory relative to the project root.
+///
+/// # Parameters
+/// - `filename`: The name of the test data file.
+///
+/// # Returns
+/// The full path to the specified test data file as a `PathBuf`.
 pub fn test_data_path(filename: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("tests/data")
         .join(filename)
 }
 
-/// Create a minimal mjlog XML for testing
+/// Returns a minimal mjlog XML string representing a basic Mahjong game log scenario.
+///
+/// The XML includes essential elements for initializing a game with four players and a simple game flow. Useful for testing parsers or components that require a valid mjlog input.
 pub fn minimal_mjlog() -> String {
     r#"<?xml version="1.0" encoding="Shift_JIS"?>
 <mjloggm ver="2.3" shuffle="mt19937ar-sha512-n288-base64">
@@ -21,7 +29,9 @@ pub fn minimal_mjlog() -> String {
 </mjloggm>"#.to_string()
 }
 
-/// Create a complete mjlog XML for testing
+/// Returns a complete mjlog XML string representing a detailed Mahjong game log for testing purposes.
+///
+/// The returned XML includes player information, initial game state, tile draws and discards, dora indicators, reach declarations, and an agari (win) event. This fixture is suitable for tests requiring a comprehensive mjlog scenario.
 pub fn complete_mjlog() -> String {
     r#"<?xml version="1.0" encoding="Shift_JIS"?>
 <mjloggm ver="2.3" shuffle="mt19937ar-sha512-n288-base64">
