@@ -1,7 +1,7 @@
-use mjlog_parser::{parse_mjlog, ParserOutput};
 use std::io::Cursor;
 use std::process::Command;
 use tempfile::NamedTempFile;
+use tenhou_log_parser::{parse_mjlog, ParserOutput};
 
 mod helpers;
 use helpers::{complete_mjlog, minimal_mjlog, test_data_path};
@@ -46,7 +46,7 @@ fn test_cli_help_command() {
 
     assert!(output.status.success());
     let stdout = String::from_utf8(output.stdout).unwrap();
-    assert!(stdout.contains("mjlog-parser"));
+    assert!(stdout.contains("tenhou-log-parser"));
     assert!(stdout.contains("A parser for Tenhou mjlog files"));
 }
 

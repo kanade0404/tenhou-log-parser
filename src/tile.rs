@@ -20,7 +20,7 @@ pub enum TileType {
 ///
 /// # Examples
 /// ```
-/// use mjlog_parser::tile_id_to_string;
+/// use tenhou_log_parser::tile_id_to_string;
 /// assert_eq!(tile_id_to_string(0), "1m");
 /// assert_eq!(tile_id_to_string(31 * 4), "white");
 /// ```
@@ -46,7 +46,7 @@ pub fn tile_id_to_string(id: u32) -> Cow<'static, str> {
 ///
 /// # Examples
 /// ```
-/// use mjlog_parser::tile_string_to_id;
+/// use tenhou_log_parser::tile_string_to_id;
 /// assert_eq!(tile_string_to_id("1m").unwrap(), 0);
 /// assert_eq!(tile_string_to_id("white").unwrap(), 124);
 /// ```

@@ -3,7 +3,7 @@ use tempfile::NamedTempFile;
 
 #[test]
 fn test_e2e_sample_xml() {
-    let output = Command::new(env!("CARGO_BIN_EXE_mjlog-parser"))
+    let output = Command::new(env!("CARGO_BIN_EXE_tenhou-log-parser"))
         .args(&["tests/data/sample.xml", "--stream"])
         .output()
         .expect("Failed to execute command");
@@ -74,7 +74,7 @@ fn test_e2e_file_output() {
     let temp_output = NamedTempFile::new().unwrap();
     let output_path = temp_output.path().to_str().unwrap();
 
-    let output = Command::new(env!("CARGO_BIN_EXE_mjlog-parser"))
+    let output = Command::new(env!("CARGO_BIN_EXE_tenhou-log-parser"))
         .args(&["tests/data/sample.xml", "-o", output_path, "-f"])
         .output()
         .expect("Failed to execute command");
@@ -98,7 +98,7 @@ fn test_e2e_file_output() {
 
 #[test]
 fn test_e2e_verbose_mode() {
-    let output = Command::new(env!("CARGO_BIN_EXE_mjlog-parser"))
+    let output = Command::new(env!("CARGO_BIN_EXE_tenhou-log-parser"))
         .args(&["tests/data/sample.xml", "--stream", "-v"])
         .output()
         .expect("Failed to execute command");
@@ -120,7 +120,7 @@ fn test_e2e_verbose_mode() {
 
 #[test]
 fn test_e2e_nonexistent_file() {
-    let output = Command::new(env!("CARGO_BIN_EXE_mjlog-parser"))
+    let output = Command::new(env!("CARGO_BIN_EXE_tenhou-log-parser"))
         .args(&["nonexistent.xml"])
         .output()
         .expect("Failed to execute command");
@@ -132,14 +132,14 @@ fn test_e2e_nonexistent_file() {
 
 #[test]
 fn test_e2e_help() {
-    let output = Command::new(env!("CARGO_BIN_EXE_mjlog-parser"))
+    let output = Command::new(env!("CARGO_BIN_EXE_tenhou-log-parser"))
         .args(&["--help"])
         .output()
         .expect("Failed to execute command");
 
     assert!(output.status.success());
     let stdout = String::from_utf8(output.stdout).unwrap();
-    assert!(stdout.contains("mjlog-parser"));
+    assert!(stdout.contains("tenhou-log-parser"));
     assert!(stdout.contains("A parser for Tenhou mjlog files"));
     assert!(stdout.contains("--stream"));
     assert!(stdout.contains("--verbose"));
@@ -147,7 +147,7 @@ fn test_e2e_help() {
 
 #[test]
 fn test_e2e_version() {
-    let output = Command::new(env!("CARGO_BIN_EXE_mjlog-parser"))
+    let output = Command::new(env!("CARGO_BIN_EXE_tenhou-log-parser"))
         .args(&["--version"])
         .output()
         .expect("Failed to execute command");
