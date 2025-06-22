@@ -427,11 +427,10 @@ impl MjlogParser {
             // Try to get tile ID from attributes first
             for attr in element.attributes() {
                 let attr = attr.map_err(|e| ParserError::Attr(e.to_string()))?;
-                if !attr.key.as_ref().is_empty() {
-                    continue;
+                if attr.key.as_ref().is_empty() {
+                    tile_id = Some(std::str::from_utf8(&attr.value)?.parse()?);
+                    break;
                 }
-                tile_id = Some(std::str::from_utf8(&attr.value)?.parse()?);
-                break;
             }
 
             // If no attribute, try to parse from tag name (e.g., T52 -> 52)
@@ -446,7 +445,7 @@ impl MjlogParser {
             }
 
             if let Some(id) = tile_id {
-                let tile = tile_id_to_string(id);
+                let tile = tile_id_to_string(id).into_owned();
                 round.events.push(Event::Draw { seat, tile });
             }
         }
@@ -475,11 +474,10 @@ impl MjlogParser {
             // Try to get tile ID from attributes first
             for attr in element.attributes() {
                 let attr = attr.map_err(|e| ParserError::Attr(e.to_string()))?;
-                if !attr.key.as_ref().is_empty() {
-                    continue;
+                if attr.key.as_ref().is_empty() {
+                    tile_id = Some(std::str::from_utf8(&attr.value)?.parse()?);
+                    break;
                 }
-                tile_id = Some(std::str::from_utf8(&attr.value)?.parse()?);
-                break;
             }
 
             // If no attribute, try to parse from tag name (e.g., D52 -> 52)
@@ -494,7 +492,7 @@ impl MjlogParser {
             }
 
             if let Some(id) = tile_id {
-                let tile = tile_id_to_string(id);
+                let tile = tile_id_to_string(id).into_owned();
                 round.events.push(Event::Discard {
                     seat,
                     tile,
@@ -549,7 +547,7 @@ impl MjlogParser {
             let attr = attr.map_err(|e| ParserError::Attr(e.to_string()))?;
             if attr.key.as_ref() == b"hai" {
                 let tile_id: u32 = std::str::from_utf8(&attr.value)?.parse()?;
-                let indicator = tile_id_to_string(tile_id);
+                let indicator = tile_id_to_string(tile_id).into_owned();
                 if let Some(round) = &mut self.current_round {
                     round.events.push(Event::Dora { indicator });
                 }

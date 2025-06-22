@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use crate::error::{ParserError, Result};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -19,8 +21,10 @@ pub enum TileType {
 /// # Examples
 /// ```
 /// use mjlog_parser::tile_id_to_string;
-/// assert_eq!(tile_id_to_string(0), "1m");
-/// assert_eq!(tile_id_to_string(31 * 4), "white");
+/// assert_eq!(tile_id_to_string(0).as_ref(), "1m");
+/// assert_eq!(tile_id_to_string(31 * 4).as_ref(), "white");
+/// ```
+///
 /// Converts a Mahjong tile ID to its string representation.
 ///
 /// # Parameters
@@ -28,20 +32,20 @@ pub enum TileType {
 ///
 /// # Returns
 /// The string representation of the tile, such as "1m", "east", or "unknown_<id>" for invalid IDs.
-pub fn tile_id_to_string(id: u32) -> String {
+pub fn tile_id_to_string(id: u32) -> Cow<'static, str> {
     let tile_type = id / 4;
     match tile_type {
-        0..=8 => format!("{}m", tile_type + 1),
-        9..=17 => format!("{}p", tile_type - 8),
-        18..=26 => format!("{}s", tile_type - 17),
-        27 => "east".to_string(),
-        28 => "south".to_string(),
-        29 => "west".to_string(),
-        30 => "north".to_string(),
-        31 => "white".to_string(),
-        32 => "green".to_string(),
-        33 => "red".to_string(),
-        _ => format!("unknown_{}", id),
+        0..=8 => Cow::Owned(format!("{}m", tile_type + 1)),
+        9..=17 => Cow::Owned(format!("{}p", tile_type - 8)),
+        18..=26 => Cow::Owned(format!("{}s", tile_type - 17)),
+        27 => Cow::Borrowed("east"),
+        28 => Cow::Borrowed("south"),
+        29 => Cow::Borrowed("west"),
+        30 => Cow::Borrowed("north"),
+        31 => Cow::Borrowed("white"),
+        32 => Cow::Borrowed("green"),
+        33 => Cow::Borrowed("red"),
+        _ => Cow::Owned(format!("unknown_{}", id)),
     }
 }
 
@@ -53,6 +57,8 @@ pub fn tile_id_to_string(id: u32) -> String {
 /// use mjlog_parser::tile_string_to_id;
 /// assert_eq!(tile_string_to_id("1m").unwrap(), 0);
 /// assert_eq!(tile_string_to_id("white").unwrap(), 124);
+/// ```
+///
 /// Converts a Mahjong tile string to the first corresponding tile ID.
 ///
 /// Accepts tile strings such as "1m", "9p", "5s" for suited tiles, or "east", "south", "west", "north", "white", "green", "red" for honor tiles. Returns the tile ID (0-135) for the first copy of the specified tile.
@@ -167,7 +173,7 @@ pub fn parse_tile_list(tiles: &str) -> Result<Vec<String>> {
             let id = s
                 .parse::<u32>()
                 .map_err(|_| ParserError::invalid_format(format!("Invalid tile ID: {}", s)))?;
-            Ok(tile_id_to_string(id))
+            Ok(tile_id_to_string(id).into_owned())
         })
         .collect()
 }

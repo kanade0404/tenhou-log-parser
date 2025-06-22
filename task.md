@@ -183,7 +183,7 @@
 
 ### 8.3 CI/CD設定
 - [x] .github/workflows/ci.yml作成
-  - [x] multiple OS対応（ubuntu, macos, windows）
+  - [x] multiple OS対応（ubuntu, macOS, windows）
   - [x] Rust stable/beta/nightly テスト
   - [x] lint, format, test, build各ステップ
   - [x] カバレッジレポートCodecov連携
