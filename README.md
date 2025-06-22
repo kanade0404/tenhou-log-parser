@@ -101,6 +101,23 @@ The parser outputs JSON with the following structure:
 cargo test
 ```
 
+### Code coverage
+
+Generate coverage report:
+
+```bash
+# Install tarpaulin (one time)
+cargo install cargo-tarpaulin
+
+# Generate coverage report
+cargo tarpaulin --out html --output-dir ./coverage
+
+# Or use the convenience script
+./scripts/coverage.sh
+```
+
+Current coverage: **70.60%** (269/381 lines covered)
+
 ### Code quality checks
 
 ```bash
