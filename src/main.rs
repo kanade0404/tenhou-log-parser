@@ -36,6 +36,11 @@ struct Args {
     schema: Option<PathBuf>,
 }
 
+/// Entry point for the Tenhou mjlog to JSON parser CLI.
+///
+/// Parses command-line arguments, configures logging, validates input files, and processes the specified mjlog file.
+/// Supports outputting parsed JSON to a file or streaming it to stdout, with optional schema validation and gzip decompression.
+/// Exits with status 1 on unrecoverable errors; returns `Ok(())` on success.
 fn main() -> Result<()> {
     let args = Args::parse();
 

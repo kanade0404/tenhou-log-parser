@@ -21,9 +21,17 @@ pub enum TileType {
 /// # Examples
 /// ```
 /// use mjlog_parser::tile_id_to_string;
-/// assert_eq!(tile_id_to_string(0), "1m");
-/// assert_eq!(tile_id_to_string(31 * 4), "white");
+/// assert_eq!(tile_id_to_string(0).as_ref(), "1m");
+/// assert_eq!(tile_id_to_string(31 * 4).as_ref(), "white");
 /// ```
+///
+/// Converts a Mahjong tile ID to its string representation.
+///
+/// # Parameters
+/// - `id`: The tile ID (0–135).
+///
+/// # Returns
+/// The string representation of the tile, such as "1m", "east", or "unknown_<id>" for invalid IDs.
 pub fn tile_id_to_string(id: u32) -> Cow<'static, str> {
     let tile_type = id / 4;
     match tile_type {
@@ -50,6 +58,16 @@ pub fn tile_id_to_string(id: u32) -> Cow<'static, str> {
 /// assert_eq!(tile_string_to_id("1m").unwrap(), 0);
 /// assert_eq!(tile_string_to_id("white").unwrap(), 124);
 /// ```
+///
+/// Converts a Mahjong tile string to the first corresponding tile ID.
+///
+/// Accepts tile strings such as "1m", "9p", "5s" for suited tiles, or "east", "south", "west", "north", "white", "green", "red" for honor tiles. Returns the tile ID (0-135) for the first copy of the specified tile.
+///
+/// # Returns
+/// The tile ID corresponding to the given tile string.
+///
+/// # Errors
+/// Returns an error if the tile string is invalid or not recognized.
 pub fn tile_string_to_id(tile: &str) -> Result<u32> {
     let tile_type =
         match tile {
@@ -110,7 +128,16 @@ pub fn tile_string_to_id(tile: &str) -> Result<u32> {
     Ok(tile_type * 4)
 }
 
-/// Convert tile type to TileType enum
+/// Converts a tile ID to its corresponding `TileType` enum variant.
+///
+/// # Parameters
+/// - `id`: The tile ID (0–135).
+///
+/// # Returns
+/// The `TileType` variant representing the tile type for the given ID.
+///
+/// # Errors
+/// Returns `ParserError::InvalidTileId` if the ID is outside the valid range.
 pub fn tile_id_to_type(id: u32) -> Result<TileType> {
     let tile_type = id / 4;
     match tile_type {
@@ -128,7 +155,13 @@ pub fn tile_id_to_type(id: u32) -> Result<TileType> {
     }
 }
 
-/// Parse a comma-separated list of tile IDs to tile strings
+/// Parses a comma-separated string of tile IDs into a vector of tile string representations.
+///
+/// # Parameters
+/// - `tiles`: A comma-separated string containing tile IDs.
+///
+/// # Returns
+/// A vector of tile strings corresponding to the provided IDs, or an error if any ID is invalid.
 pub fn parse_tile_list(tiles: &str) -> Result<Vec<String>> {
     if tiles.is_empty() {
         return Ok(vec![]);
