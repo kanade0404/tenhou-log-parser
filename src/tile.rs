@@ -163,6 +163,11 @@ mod tests {
         assert_eq!(tile_id_to_string(124), "white");
         assert_eq!(tile_id_to_string(128), "green");
         assert_eq!(tile_id_to_string(132), "red");
+        
+        // Test invalid tile IDs - should return "unknown_<id>"
+        assert_eq!(tile_id_to_string(136), "unknown_136");
+        assert_eq!(tile_id_to_string(1000), "unknown_1000");
+        assert_eq!(tile_id_to_string(9999), "unknown_9999");
     }
 
     #[test]
@@ -185,10 +190,25 @@ mod tests {
 
     #[test]
     fn test_tile_string_to_id_invalid() {
+        // Test invalid man tiles
         assert!(tile_string_to_id("0m").is_err());
         assert!(tile_string_to_id("10m").is_err());
+        assert!(tile_string_to_id("am").is_err()); // Non-digit character
+        
+        // Test invalid pin tiles
+        assert!(tile_string_to_id("0p").is_err());
+        assert!(tile_string_to_id("10p").is_err());
+        assert!(tile_string_to_id("ap").is_err()); // Non-digit character
+        
+        // Test invalid sou tiles
+        assert!(tile_string_to_id("0s").is_err());
+        assert!(tile_string_to_id("10s").is_err());
+        assert!(tile_string_to_id("as").is_err()); // Non-digit character
+        
+        // Test completely invalid strings
         assert!(tile_string_to_id("invalid").is_err());
         assert!(tile_string_to_id("").is_err());
+        assert!(tile_string_to_id("xyz").is_err());
     }
 
     #[test]
