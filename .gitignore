@@ -1,0 +1,8 @@
+target/
+.claude/settings.local.json
+
+# Coverage reports
+coverage-report/
+*.profraw
+tarpaulin-report.html
+cobertura.xml
