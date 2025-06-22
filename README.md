@@ -44,6 +44,7 @@ use tenhou_log_parser::{parse_file, ParserOptions};
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let options = ParserOptions {
         verbose: false,
+        validate_schema: None,
     };
     
     parse_file("game.mjlog", "output.json", &options)?;
