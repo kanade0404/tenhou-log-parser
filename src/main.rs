@@ -4,10 +4,10 @@ use anyhow::{Context, Result};
 use clap::Parser;
 use log::{error, info};
 
-use mjlog_parser::{parse_file, parse_stream, ParserOptions};
+use tenhou_log_parser::{parse_file, parse_stream, ParserOptions};
 
 #[derive(Parser)]
-#[command(name = "mjlog-parser")]
+#[command(name = "tenhou-log-parser")]
 #[command(about = "A parser for Tenhou mjlog files to JSON conversion")]
 #[command(version)]
 struct Args {

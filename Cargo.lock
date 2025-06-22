@@ -291,25 +291,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "mjlog-parser"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "clap",
- "encoding_rs",
- "env_logger",
- "flate2",
- "log",
- "percent-encoding",
- "quick-xml",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror",
- "uuid",
-]
-
-[[package]]
 name = "once_cell"
 version = "1.21.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -474,6 +455,25 @@ dependencies = [
  "once_cell",
  "rustix",
  "windows-sys 0.59.0",
+]
+
+[[package]]
+name = "tenhou-log-parser"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "encoding_rs",
+ "env_logger",
+ "flate2",
+ "log",
+ "percent-encoding",
+ "quick-xml",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror",
+ "uuid",
 ]
 
 [[package]]

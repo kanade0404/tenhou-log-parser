@@ -1,5 +1,5 @@
 [package]
-name = "mjlog-parser"
+name = "tenhou-log-parser"
 version = "0.1.0"
 edition = "2021"
 authors = ["Seiya Sakata"]
@@ -7,7 +7,7 @@ description = "A parser for Tenhou mjlog files to JSON conversion"
 license = "MIT"
 
 [[bin]]
-name = "mjlog-parser"
+name = "tenhou-log-parser"
 path = "src/main.rs"
 
 [dependencies]

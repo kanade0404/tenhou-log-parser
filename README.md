@@ -1,4 +1,4 @@
-# mjlog-parser
+# tenhou-log-parser
 
 A high-performance parser for Tenhou (天鳳) mahjong game logs written in Rust.
 
@@ -16,8 +16,8 @@ A high-performance parser for Tenhou (天鳳) mahjong game logs written in Rust.
 ### From source
 
 ```bash
-git clone https://github.com/yourusername/mjlog-parser
-cd mjlog-parser
+git clone https://github.com/yourusername/tenhou-log-parser
+cd tenhou-log-parser
 cargo build --release
 ```
 
@@ -27,23 +27,24 @@ cargo build --release
 
 ```bash
 # Parse and output to stdout
-mjlog-parser input.mjlog --stream
+tenhou-log-parser input.mjlog --stream
 
 # Parse and save to file
-mjlog-parser input.mjlog -o output.json
+tenhou-log-parser input.mjlog -o output.json
 
 # Verbose mode
-mjlog-parser input.mjlog --stream --verbose
+tenhou-log-parser input.mjlog --stream --verbose
 ```
 
 ### Library
 
 ```rust
-use mjlog_parser::{parse_file, ParserOptions};
+use tenhou_log_parser::{parse_file, ParserOptions};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let options = ParserOptions {
         verbose: false,
+        validate_schema: None,
     };
     
     parse_file("game.mjlog", "output.json", &options)?;
