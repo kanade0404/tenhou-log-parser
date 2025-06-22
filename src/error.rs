@@ -112,7 +112,10 @@ mod tests {
         assert_eq!(format!("{}", encoding_err), "Encoding error: bad encoding");
 
         let schema_err = ParserError::schema("invalid schema");
-        assert_eq!(format!("{}", schema_err), "Schema validation error: invalid schema");
+        assert_eq!(
+            format!("{}", schema_err),
+            "Schema validation error: invalid schema"
+        );
 
         let format_err = ParserError::invalid_format("bad format");
         assert_eq!(format!("{}", format_err), "Invalid format: bad format");
@@ -121,7 +124,10 @@ mod tests {
         assert_eq!(format!("{}", tile_err), "Invalid tile ID: 999");
 
         let attr_err = ParserError::Attr("missing attribute".to_string());
-        assert_eq!(format!("{}", attr_err), "XML attribute error: missing attribute");
+        assert_eq!(
+            format!("{}", attr_err),
+            "XML attribute error: missing attribute"
+        );
     }
 
     #[test]

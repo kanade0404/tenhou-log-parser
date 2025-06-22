@@ -115,13 +115,13 @@ fn test_json_serialization() {
 #[test]
 fn test_sample_xml_file_parsing() {
     let sample_path = test_data_path("sample.xml");
-    
+
     // Check if sample file exists
     if sample_path.exists() {
         let content = std::fs::read_to_string(&sample_path).unwrap();
         let cursor = Cursor::new(content.as_bytes());
         let result = parse_mjlog(cursor);
-        
+
         assert!(result.is_ok());
         let output = result.unwrap();
         assert_eq!(output.mjlog_version, "2.3");

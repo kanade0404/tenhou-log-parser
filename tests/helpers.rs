@@ -2,7 +2,9 @@ use std::path::PathBuf;
 
 /// Get the path to a specific test data file
 pub fn test_data_path(filename: &str) -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/data").join(filename)
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/data")
+        .join(filename)
 }
 
 /// Create a minimal mjlog XML for testing

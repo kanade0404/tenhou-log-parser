@@ -126,7 +126,7 @@ impl MjlogParser {
                             }
                         }
                     }
-                },
+                }
                 XmlEvent::End(_) => {}
                 XmlEvent::Eof => break,
                 _ => {}
@@ -608,11 +608,11 @@ fn percent_decode(input: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::io::Cursor;
-    use tempfile::NamedTempFile;
-    use std::io::Write;
     use flate2::write::GzEncoder;
     use flate2::Compression;
+    use std::io::Cursor;
+    use std::io::Write;
+    use tempfile::NamedTempFile;
 
     #[test]
     fn test_parse_minimal_mjlog() {
@@ -645,7 +645,7 @@ mod tests {
 
         // Create a temporary gzipped file
         let mut temp_file = NamedTempFile::with_suffix(".mjlog").unwrap();
-        
+
         // Write gzipped content
         use flate2::write::GzEncoder;
         use flate2::Compression;
@@ -658,10 +658,10 @@ mod tests {
         // Test parse_file with gzipped input
         let mut output_file = NamedTempFile::with_suffix(".json").unwrap();
         let options = ParserOptions::default();
-        
+
         let result = parse_file(temp_file.path(), output_file.path(), &options);
         assert!(result.is_ok());
-        
+
         // Verify output file was created and contains valid JSON
         let output_content = std::fs::read_to_string(output_file.path()).unwrap();
         let parsed: serde_json::Value = serde_json::from_str(&output_content).unwrap();
@@ -679,10 +679,10 @@ mod tests {
         let cursor = Cursor::new(mjlog_content.as_bytes());
         let mut output = Vec::new();
         let options = ParserOptions::default();
-        
+
         let result = parse_stream(cursor, &mut output, &options);
         assert!(result.is_ok());
-        
+
         let output_str = String::from_utf8(output).unwrap();
         let parsed: serde_json::Value = serde_json::from_str(&output_str).unwrap();
         assert!(parsed.get("mjlogVersion").is_some());
@@ -690,8 +690,9 @@ mod tests {
 
     #[test]
     fn test_parse_with_encoding_errors() {
-        // Create content with invalid Shift_JIS sequence 
-        let mut bad_content = b"<?xml version=\"1.0\" encoding=\"Shift_JIS\"?>\n<mjloggm ver=\"2.3\">\n".to_vec();
+        // Create content with invalid Shift_JIS sequence
+        let mut bad_content =
+            b"<?xml version=\"1.0\" encoding=\"Shift_JIS\"?>\n<mjloggm ver=\"2.3\">\n".to_vec();
         bad_content.extend_from_slice(&[0xFF, 0xFE, 0xFD]); // Invalid Shift_JIS
         bad_content.extend_from_slice(b"\n</mjloggm>");
 
@@ -729,7 +730,7 @@ mod tests {
         let cursor = Cursor::new(mjlog_content.as_bytes());
         let result = parse_mjlog(cursor);
         match &result {
-            Ok(_) => {},
+            Ok(_) => {}
             Err(e) => panic!("Parse failed with error: {}", e),
         }
         assert!(result.is_ok());
@@ -738,16 +739,18 @@ mod tests {
         assert_eq!(output.mjlog_version, "2.3");
         assert_eq!(output.players.len(), 4);
         assert_eq!(output.rules.lobby_id, Some(1)); // Non-zero lobby
-        
+
         // Check that percent-encoded name was decoded
         assert_eq!(output.players[0].player_id, "テスト");
-        
+
         // Check events were parsed
         let round = &output.rounds[0];
         assert!(!round.events.is_empty());
-        
+
         // Check specific events exist
-        let event_types: Vec<&str> = round.events.iter()
+        let event_types: Vec<&str> = round
+            .events
+            .iter()
             .filter_map(|e| match e {
                 Event::Draw { .. } => Some("draw"),
                 Event::Discard { .. } => Some("discard"),
@@ -758,7 +761,7 @@ mod tests {
                 _ => None,
             })
             .collect();
-        
+
         assert!(event_types.contains(&"draw"));
         assert!(event_types.contains(&"discard"));
         assert!(event_types.contains(&"dora"));
@@ -774,7 +777,7 @@ mod tests {
 <mjloggm ver="2.3">
     <INIT seed="0,0" ten="250,250,250,250" oya="0" hai0="0" hai1="1" hai2="2" hai3="3"/>
 </mjloggm>"#;
-        
+
         let cursor = Cursor::new(bad_seed.as_bytes());
         let result = parse_mjlog(cursor);
         assert!(result.is_err());
@@ -784,7 +787,7 @@ mod tests {
 <mjloggm ver="2.3">
     <INIT seed="0,0,0,1,2,52" ten="250,250" oya="0" hai0="0" hai1="1" hai2="2" hai3="3"/>
 </mjloggm>"#;
-        
+
         let cursor = Cursor::new(bad_ten.as_bytes());
         let result = parse_mjlog(cursor);
         assert!(result.is_err());
@@ -816,7 +819,7 @@ mod tests {
 
         let output = result.unwrap();
         assert_eq!(output.rounds.len(), 6);
-        
+
         // Check ryuukyoku types
         for (i, round) in output.rounds.iter().enumerate() {
             if let Some(Event::Ryuukyoku { reason, .. }) = round.events.last() {
@@ -859,7 +862,10 @@ mod tests {
         input_file.flush().unwrap();
 
         let output_file = NamedTempFile::with_suffix(".json").unwrap();
-        let options = ParserOptions { verbose: false, validate_schema: None };
+        let options = ParserOptions {
+            verbose: false,
+            validate_schema: None,
+        };
 
         // This should test the gz branch in parse_file
         let result = parse_file(input_file.path(), output_file.path(), &options);
@@ -882,7 +888,10 @@ mod tests {
         input_file.flush().unwrap();
 
         let output_file = NamedTempFile::with_suffix(".json").unwrap();
-        let options = ParserOptions { verbose: false, validate_schema: None };
+        let options = ParserOptions {
+            verbose: false,
+            validate_schema: None,
+        };
 
         // This should test the non-gz branch in parse_file
         let result = parse_file(input_file.path(), output_file.path(), &options);
@@ -892,7 +901,8 @@ mod tests {
     #[test]
     fn test_parse_with_encoding_warnings() {
         // Create content with invalid Shift_JIS bytes to trigger encoding warnings
-        let mut invalid_content = b"<?xml version=\"1.0\" encoding=\"Shift_JIS\"?>\n<mjloggm ver=\"2.3\">\n".to_vec();
+        let mut invalid_content =
+            b"<?xml version=\"1.0\" encoding=\"Shift_JIS\"?>\n<mjloggm ver=\"2.3\">\n".to_vec();
         // Add some invalid bytes that will cause encoding warnings
         invalid_content.extend_from_slice(&[0xFF, 0xFE, 0xFD]); // Invalid Shift_JIS sequence
         invalid_content.extend_from_slice(b"\n</mjloggm>");
@@ -935,7 +945,7 @@ mod tests {
         let cursor = Cursor::new(mjlog_content.as_bytes());
         let result = parse_mjlog(cursor);
         assert!(result.is_ok());
-        
+
         // Verify some events were captured despite edge cases
         let output = result.unwrap();
         assert!(!output.rounds.is_empty());
@@ -950,10 +960,16 @@ mod tests {
         struct FailingWriter;
         impl Write for FailingWriter {
             fn write(&mut self, _buf: &[u8]) -> std::io::Result<usize> {
-                Err(std::io::Error::new(std::io::ErrorKind::Other, "Write failed"))
+                Err(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    "Write failed",
+                ))
             }
             fn flush(&mut self) -> std::io::Result<()> {
-                Err(std::io::Error::new(std::io::ErrorKind::Other, "Flush failed"))
+                Err(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    "Flush failed",
+                ))
             }
         }
 
@@ -964,7 +980,10 @@ mod tests {
 
         let cursor = Cursor::new(mjlog_content.as_bytes());
         let failing_writer = FailingWriter;
-        let options = ParserOptions { verbose: false, validate_schema: None };
+        let options = ParserOptions {
+            verbose: false,
+            validate_schema: None,
+        };
 
         let result = parse_stream(cursor, failing_writer, &options);
         assert!(result.is_err());
