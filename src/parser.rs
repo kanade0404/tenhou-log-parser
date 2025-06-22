@@ -3,7 +3,7 @@ use std::path::Path;
 
 use encoding_rs::SHIFT_JIS;
 use flate2::read::GzDecoder;
-use log::{debug, info, warn};
+use log::{debug, info};
 use quick_xml::events::Event as XmlEvent;
 use quick_xml::Reader;
 
@@ -51,16 +51,39 @@ pub fn parse_stream<R: Read, W: Write>(
     Ok(())
 }
 
+/// Maximum file size limit (100MB) to prevent memory exhaustion
+const MAX_FILE_SIZE: usize = 100 * 1024 * 1024;
+
 /// Parse mjlog from reader and return ParserOutput
 pub fn parse_mjlog<R: Read>(reader: R) -> Result<ParserOutput> {
+    let reader = std::io::BufReader::new(reader);
     let mut buf = Vec::new();
-    let mut reader = std::io::BufReader::new(reader);
-    reader.read_to_end(&mut buf)?;
+    
+    // Read with size limit to prevent memory exhaustion
+    let mut limited_reader = reader.take(MAX_FILE_SIZE as u64);
+    limited_reader.read_to_end(&mut buf)?;
+    
+    // Check if we hit the size limit
+    if buf.len() >= MAX_FILE_SIZE {
+        return Err(ParserError::parse(
+            format!("File too large (>{} bytes). Maximum allowed size is {} bytes", 
+                    buf.len(), MAX_FILE_SIZE),
+            "file size validation"
+        ));
+    }
 
     // Convert from Shift_JIS to UTF-8
-    let (content, _, had_errors) = SHIFT_JIS.decode(&buf);
+    let (content, encoding_used, had_errors) = SHIFT_JIS.decode(&buf);
     if had_errors {
-        warn!("Encoding errors detected during Shift_JIS to UTF-8 conversion");
+        // Log warning but continue processing
+        // Only fail if the encoding is completely wrong or data is severely corrupted
+        if encoding_used != encoding_rs::UTF_8 && content.is_empty() {
+            return Err(ParserError::encoding(
+                "Critical encoding error: Unable to decode any content from Shift_JIS"
+            ));
+        }
+        // For partial errors, log and continue
+        debug!("Encoding errors detected during Shift_JIS to UTF-8 conversion, but continuing");
     }
 
     let mut xml_reader = Reader::from_str(&content);
@@ -656,7 +679,7 @@ mod tests {
         temp_file.flush().unwrap();
 
         // Test parse_file with gzipped input
-        let mut output_file = NamedTempFile::with_suffix(".json").unwrap();
+        let output_file = NamedTempFile::with_suffix(".json").unwrap();
         let options = ParserOptions::default();
 
         let result = parse_file(temp_file.path(), output_file.path(), &options);
