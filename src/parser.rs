@@ -365,11 +365,10 @@ impl MjlogParser {
             // Try to get tile ID from attributes first
             for attr in element.attributes() {
                 let attr = attr.map_err(|e| ParserError::Attr(e.to_string()))?;
-                if !attr.key.as_ref().is_empty() {
-                    continue;
+                if attr.key.as_ref().is_empty() {
+                    tile_id = Some(std::str::from_utf8(&attr.value)?.parse()?);
+                    break;
                 }
-                tile_id = Some(std::str::from_utf8(&attr.value)?.parse()?);
-                break;
             }
 
             // If no attribute, try to parse from tag name (e.g., T52 -> 52)
@@ -409,11 +408,10 @@ impl MjlogParser {
             // Try to get tile ID from attributes first
             for attr in element.attributes() {
                 let attr = attr.map_err(|e| ParserError::Attr(e.to_string()))?;
-                if !attr.key.as_ref().is_empty() {
-                    continue;
+                if attr.key.as_ref().is_empty() {
+                    tile_id = Some(std::str::from_utf8(&attr.value)?.parse()?);
+                    break;
                 }
-                tile_id = Some(std::str::from_utf8(&attr.value)?.parse()?);
-                break;
             }
 
             // If no attribute, try to parse from tag name (e.g., D52 -> 52)

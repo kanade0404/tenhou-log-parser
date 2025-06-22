@@ -116,7 +116,7 @@ cargo tarpaulin --out html --output-dir ./coverage
 ./scripts/coverage.sh
 ```
 
-Current coverage: **70.60%** (269/381 lines covered)
+Current coverage: **90.96%** (comprehensive test coverage across all modules)
 
 ### Code quality checks
 
