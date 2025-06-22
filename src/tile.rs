@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+
 use crate::error::{ParserError, Result};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
