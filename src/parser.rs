@@ -98,21 +98,33 @@ impl MjlogParser {
 
         loop {
             match reader.read_event_into(&mut buf)? {
-                XmlEvent::Start(ref e) | XmlEvent::Empty(ref e) => match e.name().as_ref() {
-                    b"mjloggm" => self.parse_mjloggm(e)?,
-                    b"GO" => self.parse_go(e)?,
-                    b"UN" => self.parse_un(e)?,
-                    b"TAIKYOKU" => self.parse_taikyoku(e)?,
-                    b"INIT" => self.parse_init(e)?,
-                    b"T" | b"U" | b"V" | b"W" => self.parse_draw(e)?,
-                    b"D" | b"E" | b"F" | b"G" => self.parse_discard(e)?,
-                    b"N" => self.parse_naki(e)?,
-                    b"DORA" => self.parse_dora(e)?,
-                    b"REACH" => self.parse_reach(e)?,
-                    b"AGARI" => self.parse_agari(e)?,
-                    b"RYUUKYOKU" => self.parse_ryuukyoku(e)?,
-                    _ => {
-                        debug!("Unknown tag: {:?}", std::str::from_utf8(e.name().as_ref()));
+                XmlEvent::Start(ref e) | XmlEvent::Empty(ref e) => {
+                    let tag_name = e.name();
+                    let tag_bytes = tag_name.as_ref();
+                    match tag_bytes {
+                        b"mjloggm" => self.parse_mjloggm(e)?,
+                        b"GO" => self.parse_go(e)?,
+                        b"UN" => self.parse_un(e)?,
+                        b"TAIKYOKU" => self.parse_taikyoku(e)?,
+                        b"INIT" => self.parse_init(e)?,
+                        b"N" => self.parse_naki(e)?,
+                        b"DORA" => self.parse_dora(e)?,
+                        b"REACH" => self.parse_reach(e)?,
+                        b"AGARI" => self.parse_agari(e)?,
+                        b"RYUUKYOKU" => self.parse_ryuukyoku(e)?,
+                        _ => {
+                            // Check if it's a draw or discard tag
+                            if !tag_bytes.is_empty() {
+                                let first_byte = tag_bytes[0];
+                                match first_byte {
+                                    b'T' | b'U' | b'V' | b'W' => self.parse_draw(e)?,
+                                    b'D' | b'E' | b'F' | b'G' => self.parse_discard(e)?,
+                                    _ => {
+                                        debug!("Unknown tag: {:?}", std::str::from_utf8(tag_bytes));
+                                    }
+                                }
+                            }
+                        }
                     }
                 },
                 XmlEvent::End(_) => {}
@@ -312,11 +324,11 @@ impl MjlogParser {
     fn parse_draw(&mut self, element: &quick_xml::events::BytesStart) -> Result<()> {
         let name = element.name();
         let tag_name = std::str::from_utf8(name.as_ref())?;
-        let seat = match tag_name {
-            "T" => 0,
-            "U" => 1,
-            "V" => 2,
-            "W" => 3,
+        let seat = match tag_name.chars().next().unwrap_or('\0') {
+            'T' => 0,
+            'U' => 1,
+            'V' => 2,
+            'W' => 3,
             _ => return Err(ParserError::invalid_format("Invalid draw tag")),
         };
 
@@ -357,11 +369,11 @@ impl MjlogParser {
     fn parse_discard(&mut self, element: &quick_xml::events::BytesStart) -> Result<()> {
         let name = element.name();
         let tag_name = std::str::from_utf8(name.as_ref())?;
-        let seat = match tag_name {
-            "D" => 0,
-            "E" => 1,
-            "F" => 2,
-            "G" => 3,
+        let seat = match tag_name.chars().next().unwrap_or('\0') {
+            'D' => 0,
+            'E' => 1,
+            'F' => 2,
+            'G' => 3,
             _ => return Err(ParserError::invalid_format("Invalid discard tag")),
         };
 
@@ -597,6 +609,10 @@ fn percent_decode(input: &str) -> String {
 mod tests {
     use super::*;
     use std::io::Cursor;
+    use tempfile::NamedTempFile;
+    use std::io::Write;
+    use flate2::write::GzEncoder;
+    use flate2::Compression;
 
     #[test]
     fn test_parse_minimal_mjlog() {
@@ -617,5 +633,368 @@ mod tests {
         assert_eq!(output.mjlog_version, "2.3");
         assert_eq!(output.players.len(), 4);
         assert_eq!(output.rounds.len(), 1);
+    }
+
+    #[test]
+    fn test_parse_with_gzip() {
+        let mjlog_content = r#"<?xml version="1.0" encoding="Shift_JIS"?>
+<mjloggm ver="2.3">
+    <GO type="169" lobby="0"/>
+    <UN n0="Player1" n1="Player2" n2="Player3" n3="Player4" dan="1,2,3,4" rate="1500,1600,1700,1800" sx="M,M,M,M"/>
+</mjloggm>"#;
+
+        // Create a temporary gzipped file
+        let mut temp_file = NamedTempFile::with_suffix(".mjlog").unwrap();
+        
+        // Write gzipped content
+        use flate2::write::GzEncoder;
+        use flate2::Compression;
+        let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
+        encoder.write_all(mjlog_content.as_bytes()).unwrap();
+        let gzipped_data = encoder.finish().unwrap();
+        temp_file.write_all(&gzipped_data).unwrap();
+        temp_file.flush().unwrap();
+
+        // Test parse_file with gzipped input
+        let mut output_file = NamedTempFile::with_suffix(".json").unwrap();
+        let options = ParserOptions::default();
+        
+        let result = parse_file(temp_file.path(), output_file.path(), &options);
+        assert!(result.is_ok());
+        
+        // Verify output file was created and contains valid JSON
+        let output_content = std::fs::read_to_string(output_file.path()).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&output_content).unwrap();
+        assert!(parsed.get("mjlogVersion").is_some());
+    }
+
+    #[test]
+    fn test_parse_stream() {
+        let mjlog_content = r#"<?xml version="1.0" encoding="Shift_JIS"?>
+<mjloggm ver="2.3">
+    <GO type="169" lobby="0"/>
+    <UN n0="Player1" n1="Player2" n2="Player3" n3="Player4" dan="1,2,3,4" rate="1500,1600,1700,1800" sx="M,M,M,M"/>
+</mjloggm>"#;
+
+        let cursor = Cursor::new(mjlog_content.as_bytes());
+        let mut output = Vec::new();
+        let options = ParserOptions::default();
+        
+        let result = parse_stream(cursor, &mut output, &options);
+        assert!(result.is_ok());
+        
+        let output_str = String::from_utf8(output).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&output_str).unwrap();
+        assert!(parsed.get("mjlogVersion").is_some());
+    }
+
+    #[test]
+    fn test_parse_with_encoding_errors() {
+        // Create content with invalid Shift_JIS sequence 
+        let mut bad_content = b"<?xml version=\"1.0\" encoding=\"Shift_JIS\"?>\n<mjloggm ver=\"2.3\">\n".to_vec();
+        bad_content.extend_from_slice(&[0xFF, 0xFE, 0xFD]); // Invalid Shift_JIS
+        bad_content.extend_from_slice(b"\n</mjloggm>");
+
+        let cursor = Cursor::new(bad_content);
+        let result = parse_mjlog(cursor);
+        // Should still succeed but with encoding warnings
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_parse_complex_mjlog() {
+        let mjlog_content = r#"<?xml version="1.0" encoding="Shift_JIS"?>
+<mjloggm ver="2.3">
+    <GO type="169" lobby="1"/>
+    <UN n0="%E3%83%86%E3%82%B9%E3%83%88" n1="Player2" n2="Player3" n3="Player4" dan="1,2,3,4" rate="1500,1600,1700,1800" sx="M,F,M,F"/>
+    <TAIKYOKU oya="0"/>
+    <INIT seed="0,0,0,1,2,52" ten="250,250,250,250" oya="0" hai0="0,4,8,12,16,20,24,28,32,36,40,44,48" hai1="1,5,9,13,17,21,25,29,33,37,41,45,49" hai2="2,6,10,14,18,22,26,30,34,38,42,46,50" hai3="3,7,11,15,19,23,27,31,35,39,43,47,51"/>
+    <T52/>
+    <D0/>
+    <U53/>
+    <E1/>
+    <V54/>
+    <F2/>
+    <W55/>
+    <G3/>
+    <DORA hai="56"/>
+    <REACH who="0" step="1" ten="240,250,250,250"/>
+    <T57/>
+    <D57/>
+    <REACH who="0" step="2"/>
+    <N who="1" m="12345"/>
+    <AGARI who="0" fromWho="0" ten="30,1000,0" yaku="1,1" sc="240,1010,250,-250,250,-250,250,-250"/>
+</mjloggm>"#;
+
+        let cursor = Cursor::new(mjlog_content.as_bytes());
+        let result = parse_mjlog(cursor);
+        match &result {
+            Ok(_) => {},
+            Err(e) => panic!("Parse failed with error: {}", e),
+        }
+        assert!(result.is_ok());
+
+        let output = result.unwrap();
+        assert_eq!(output.mjlog_version, "2.3");
+        assert_eq!(output.players.len(), 4);
+        assert_eq!(output.rules.lobby_id, Some(1)); // Non-zero lobby
+        
+        // Check that percent-encoded name was decoded
+        assert_eq!(output.players[0].player_id, "テスト");
+        
+        // Check events were parsed
+        let round = &output.rounds[0];
+        assert!(!round.events.is_empty());
+        
+        // Check specific events exist
+        let event_types: Vec<&str> = round.events.iter()
+            .filter_map(|e| match e {
+                Event::Draw { .. } => Some("draw"),
+                Event::Discard { .. } => Some("discard"),
+                Event::Dora { .. } => Some("dora"),
+                Event::Reach { .. } => Some("reach"),
+                Event::Pon { .. } => Some("pon"),
+                Event::Agari { .. } => Some("agari"),
+                _ => None,
+            })
+            .collect();
+        
+        assert!(event_types.contains(&"draw"));
+        assert!(event_types.contains(&"discard"));
+        assert!(event_types.contains(&"dora"));
+        assert!(event_types.contains(&"reach"));
+        assert!(event_types.contains(&"pon"));
+        assert!(event_types.contains(&"agari"));
+    }
+
+    #[test]
+    fn test_parse_error_cases() {
+        // Test invalid seed format
+        let bad_seed = r#"<?xml version="1.0" encoding="Shift_JIS"?>
+<mjloggm ver="2.3">
+    <INIT seed="0,0" ten="250,250,250,250" oya="0" hai0="0" hai1="1" hai2="2" hai3="3"/>
+</mjloggm>"#;
+        
+        let cursor = Cursor::new(bad_seed.as_bytes());
+        let result = parse_mjlog(cursor);
+        assert!(result.is_err());
+
+        // Test invalid ten format
+        let bad_ten = r#"<?xml version="1.0" encoding="Shift_JIS"?>
+<mjloggm ver="2.3">
+    <INIT seed="0,0,0,1,2,52" ten="250,250" oya="0" hai0="0" hai1="1" hai2="2" hai3="3"/>
+</mjloggm>"#;
+        
+        let cursor = Cursor::new(bad_ten.as_bytes());
+        let result = parse_mjlog(cursor);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_ryuukyoku_types() {
+        let mjlog_content = r#"<?xml version="1.0" encoding="Shift_JIS"?>
+<mjloggm ver="2.3">
+    <GO type="169" lobby="0"/>
+    <UN n0="Player1" n1="Player2" n2="Player3" n3="Player4" dan="1,2,3,4" rate="1500,1600,1700,1800" sx="M,M,M,M"/>
+    <INIT seed="0,0,0,1,2,52" ten="250,250,250,250" oya="0" hai0="0" hai1="1" hai2="2" hai3="3"/>
+    <RYUUKYOKU ba="0,0" sc="250,0,250,0,250,0,250,0" type="yao9"/>
+    <INIT seed="1,0,0,1,2,52" ten="250,250,250,250" oya="1" hai0="0" hai1="1" hai2="2" hai3="3"/>
+    <RYUUKYOKU ba="0,0" sc="250,0,250,0,250,0,250,0" type="kaze4"/>
+    <INIT seed="2,0,0,1,2,52" ten="250,250,250,250" oya="2" hai0="0" hai1="1" hai2="2" hai3="3"/>
+    <RYUUKYOKU ba="0,0" sc="250,0,250,0,250,0,250,0" type="reach4"/>
+    <INIT seed="3,0,0,1,2,52" ten="250,250,250,250" oya="3" hai0="0" hai1="1" hai2="2" hai3="3"/>
+    <RYUUKYOKU ba="0,0" sc="250,0,250,0,250,0,250,0" type="ron3"/>
+    <INIT seed="4,0,0,1,2,52" ten="250,250,250,250" oya="0" hai0="0" hai1="1" hai2="2" hai3="3"/>
+    <RYUUKYOKU ba="0,0" sc="250,0,250,0,250,0,250,0" type="kan4"/>
+    <INIT seed="5,0,0,1,2,52" ten="250,250,250,250" oya="1" hai0="0" hai1="1" hai2="2" hai3="3"/>
+    <RYUUKYOKU ba="0,0" sc="250,0,250,0,250,0,250,0" type="unknown"/>
+</mjloggm>"#;
+
+        let cursor = Cursor::new(mjlog_content.as_bytes());
+        let result = parse_mjlog(cursor);
+        assert!(result.is_ok());
+
+        let output = result.unwrap();
+        assert_eq!(output.rounds.len(), 6);
+        
+        // Check ryuukyoku types
+        for (i, round) in output.rounds.iter().enumerate() {
+            if let Some(Event::Ryuukyoku { reason, .. }) = round.events.last() {
+                match i {
+                    0 => assert!(matches!(reason, RyuukyokuReason::Yao9)),
+                    1 => assert!(matches!(reason, RyuukyokuReason::Kaze4)),
+                    2 => assert!(matches!(reason, RyuukyokuReason::Reach4)),
+                    3 => assert!(matches!(reason, RyuukyokuReason::Ron3)),
+                    4 => assert!(matches!(reason, RyuukyokuReason::Kan4)),
+                    5 => assert!(matches!(reason, RyuukyokuReason::Normal)), // Unknown type defaults to Normal
+                    _ => panic!("Unexpected round"),
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_percent_decode() {
+        assert_eq!(percent_decode("%E3%83%86%E3%82%B9%E3%83%88"), "テスト");
+        assert_eq!(percent_decode("Player1"), "Player1");
+        assert_eq!(percent_decode(""), "");
+    }
+
+    #[test]
+    fn test_parse_file_gz() {
+        let mjlog_content = r#"<?xml version="1.0" encoding="Shift_JIS"?>
+<mjloggm ver="2.3">
+    <GO type="169" lobby="0"/>
+    <UN n0="Player1" n1="Player2" n2="Player3" n3="Player4" dan="1,2,3,4" rate="1500,1600,1700,1800" sx="M,F,M,F"/>
+    <TAIKYOKU oya="0"/>
+    <INIT seed="0,0,0,1,2,52" ten="250,250,250,250" oya="0" hai0="0,4,8,12,16,20,24,28,32,36,40,44,48" hai1="1,5,9,13,17,21,25,29,33,37,41,45,49" hai2="2,6,10,14,18,22,26,30,34,38,42,46,50" hai3="3,7,11,15,19,23,27,31,35,39,43,47,51"/>
+</mjloggm>"#;
+
+        // Create a gzipped temporary file
+        let mut input_file = NamedTempFile::with_suffix(".mjlog.gz").unwrap();
+        let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
+        encoder.write_all(mjlog_content.as_bytes()).unwrap();
+        let compressed_data = encoder.finish().unwrap();
+        input_file.write_all(&compressed_data).unwrap();
+        input_file.flush().unwrap();
+
+        let output_file = NamedTempFile::with_suffix(".json").unwrap();
+        let options = ParserOptions { verbose: false, validate_schema: None };
+
+        // This should test the gz branch in parse_file
+        let result = parse_file(input_file.path(), output_file.path(), &options);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_parse_file_regular() {
+        let mjlog_content = r#"<?xml version="1.0" encoding="Shift_JIS"?>
+<mjloggm ver="2.3">
+    <GO type="169" lobby="0"/>
+    <UN n0="Player1" n1="Player2" n2="Player3" n3="Player4" dan="1,2,3,4" rate="1500,1600,1700,1800" sx="M,F,M,F"/>
+    <TAIKYOKU oya="0"/>
+    <INIT seed="0,0,0,1,2,52" ten="250,250,250,250" oya="0" hai0="0,4,8,12,16,20,24,28,32,36,40,44,48" hai1="1,5,9,13,17,21,25,29,33,37,41,45,49" hai2="2,6,10,14,18,22,26,30,34,38,42,46,50" hai3="3,7,11,15,19,23,27,31,35,39,43,47,51"/>
+</mjloggm>"#;
+
+        // Create a regular temporary file
+        let mut input_file = NamedTempFile::with_suffix(".mjlog").unwrap();
+        input_file.write_all(mjlog_content.as_bytes()).unwrap();
+        input_file.flush().unwrap();
+
+        let output_file = NamedTempFile::with_suffix(".json").unwrap();
+        let options = ParserOptions { verbose: false, validate_schema: None };
+
+        // This should test the non-gz branch in parse_file
+        let result = parse_file(input_file.path(), output_file.path(), &options);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_parse_with_encoding_warnings() {
+        // Create content with invalid Shift_JIS bytes to trigger encoding warnings
+        let mut invalid_content = b"<?xml version=\"1.0\" encoding=\"Shift_JIS\"?>\n<mjloggm ver=\"2.3\">\n".to_vec();
+        // Add some invalid bytes that will cause encoding warnings
+        invalid_content.extend_from_slice(&[0xFF, 0xFE, 0xFD]); // Invalid Shift_JIS sequence
+        invalid_content.extend_from_slice(b"\n</mjloggm>");
+
+        let cursor = Cursor::new(invalid_content);
+        let result = parse_mjlog(cursor);
+        // Should still succeed but with encoding warnings
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_unknown_tags() {
+        let mjlog_content = r#"<?xml version="1.0" encoding="Shift_JIS"?>
+<mjloggm ver="2.3">
+    <UNKNOWN_TAG attr="value"/>
+    <ANOTHER_UNKNOWN>content</ANOTHER_UNKNOWN>
+    <INIT seed="0,0,0,1,2,52" ten="250,250,250,250" oya="0" hai0="0,4,8,12,16,20,24,28,32,36,40,44,48" hai1="1,5,9,13,17,21,25,29,33,37,41,45,49" hai2="2,6,10,14,18,22,26,30,34,38,42,46,50" hai3="3,7,11,15,19,23,27,31,35,39,43,47,51"/>
+</mjloggm>"#;
+
+        let cursor = Cursor::new(mjlog_content.as_bytes());
+        let result = parse_mjlog(cursor);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_draw_discard_edge_cases() {
+        let mjlog_content = r#"<?xml version="1.0" encoding="Shift_JIS"?>
+<mjloggm ver="2.3">
+    <INIT seed="0,0,0,1,2,52" ten="250,250,250,250" oya="0" hai0="0,4,8,12,16,20,24,28,32,36,40,44,48" hai1="1,5,9,13,17,21,25,29,33,37,41,45,49" hai2="2,6,10,14,18,22,26,30,34,38,42,46,50" hai3="3,7,11,15,19,23,27,31,35,39,43,47,51"/>
+    <T test="invalid"/>
+    <U/>
+    <V60 extra="attr"/>
+    <W/>
+    <D test="invalid"/>
+    <E/>
+    <F60 extra="attr"/>
+    <G/>
+</mjloggm>"#;
+
+        let cursor = Cursor::new(mjlog_content.as_bytes());
+        let result = parse_mjlog(cursor);
+        assert!(result.is_ok());
+        
+        // Verify some events were captured despite edge cases
+        let output = result.unwrap();
+        assert!(!output.rounds.is_empty());
+        let round = &output.rounds[0];
+        // Should have some draw and discard events
+        assert!(!round.events.is_empty());
+    }
+
+    #[test]
+    fn test_parse_stream_error() {
+        // Test invalid JSON serialization by using a mock writer that always fails
+        struct FailingWriter;
+        impl Write for FailingWriter {
+            fn write(&mut self, _buf: &[u8]) -> std::io::Result<usize> {
+                Err(std::io::Error::new(std::io::ErrorKind::Other, "Write failed"))
+            }
+            fn flush(&mut self) -> std::io::Result<()> {
+                Err(std::io::Error::new(std::io::ErrorKind::Other, "Flush failed"))
+            }
+        }
+
+        let mjlog_content = r#"<?xml version="1.0" encoding="Shift_JIS"?>
+<mjloggm ver="2.3">
+    <INIT seed="0,0,0,1,2,52" ten="250,250,250,250" oya="0" hai0="0" hai1="1" hai2="2" hai3="3"/>
+</mjloggm>"#;
+
+        let cursor = Cursor::new(mjlog_content.as_bytes());
+        let failing_writer = FailingWriter;
+        let options = ParserOptions { verbose: false, validate_schema: None };
+
+        let result = parse_stream(cursor, failing_writer, &options);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_empty_xml() {
+        let mjlog_content = r#"<?xml version="1.0" encoding="Shift_JIS"?>
+<mjloggm ver="2.3">
+</mjloggm>"#;
+
+        let cursor = Cursor::new(mjlog_content.as_bytes());
+        let result = parse_mjlog(cursor);
+        assert!(result.is_ok());
+
+        let output = result.unwrap();
+        assert_eq!(output.mjlog_version, "2.3");
+        assert!(output.rounds.is_empty());
+    }
+
+    #[test]
+    fn test_invalid_tile_parsing() {
+        let mjlog_content = r#"<?xml version="1.0" encoding="Shift_JIS"?>
+<mjloggm ver="2.3">
+    <INIT seed="0,0,0,1,2,52" ten="250,250,250,250" oya="0" hai0="invalid,abc,def" hai1="1" hai2="2" hai3="3"/>
+</mjloggm>"#;
+
+        let cursor = Cursor::new(mjlog_content.as_bytes());
+        let result = parse_mjlog(cursor);
+        // Should fail due to invalid tile parsing
+        assert!(result.is_err());
     }
 }
