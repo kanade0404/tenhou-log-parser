@@ -58,17 +58,20 @@ const MAX_FILE_SIZE: usize = 100 * 1024 * 1024;
 pub fn parse_mjlog<R: Read>(reader: R) -> Result<ParserOutput> {
     let reader = std::io::BufReader::new(reader);
     let mut buf = Vec::new();
-    
+
     // Read with size limit to prevent memory exhaustion
     let mut limited_reader = reader.take(MAX_FILE_SIZE as u64);
     limited_reader.read_to_end(&mut buf)?;
-    
+
     // Check if we hit the size limit
     if buf.len() >= MAX_FILE_SIZE {
         return Err(ParserError::parse(
-            format!("File too large (>{} bytes). Maximum allowed size is {} bytes", 
-                    buf.len(), MAX_FILE_SIZE),
-            "file size validation"
+            format!(
+                "File too large (>{} bytes). Maximum allowed size is {} bytes",
+                buf.len(),
+                MAX_FILE_SIZE
+            ),
+            "file size validation",
         ));
     }
 
@@ -79,7 +82,7 @@ pub fn parse_mjlog<R: Read>(reader: R) -> Result<ParserOutput> {
         // Only fail if the encoding is completely wrong or data is severely corrupted
         if encoding_used != encoding_rs::UTF_8 && content.is_empty() {
             return Err(ParserError::encoding(
-                "Critical encoding error: Unable to decode any content from Shift_JIS"
+                "Critical encoding error: Unable to decode any content from Shift_JIS",
             ));
         }
         // For partial errors, log and continue
