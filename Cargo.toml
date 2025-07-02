@@ -17,7 +17,7 @@ quick-xml = "=0.31.0"
 log = "=0.4.27"
 env_logger = "=0.11.8"
 anyhow = "=1.0.98"
-thiserror = "=1.0.69"
+thiserror = "=2.0.12"
 clap = { version = "=4.5.40", features = ["derive"] }
 flate2 = "=1.1.2"
 encoding_rs = "=0.8.35"
